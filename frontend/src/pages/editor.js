@@ -27,7 +27,7 @@ export default function EditorPage() {
 
   const [imageSrc, setImageSrc] = useState(null);
   const [displaySrc, setDisplaySrc] = useState(null); // current visible image (can be filtered/cropped)
-  const [originalSrc, setOriginalSrc] = useState(null);
+  const [baseSrc, setBaseSrc] = useState(null); // current base image that accumulates edits
   const [filters, setFilters] = useState({ brightness: 100, contrast: 100, saturate: 100 });
   const [cropRatio, setCropRatio] = useState('free');
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
@@ -56,7 +56,7 @@ export default function EditorPage() {
         const found = projects.find((p) => String(p.id) === String(project));
         if (found) {
           setImageSrc(found.imageData || found.imageUrl || null);
-          setOriginalSrc(found.imageData || found.imageUrl || null);
+          setBaseSrc(found.imageData || found.imageUrl || null);
           setDisplaySrc(found.imageData || found.imageUrl || null);
           return;
         }
@@ -73,7 +73,7 @@ export default function EditorPage() {
     setFilters({ brightness: 100, contrast: 100, saturate: 100 });
     setCropRatio('free');
     setDisplaySrc(imageSrc);
-    setOriginalSrc(imageSrc);
+    setBaseSrc(imageSrc);
   }, [imageSrc]);
 
   const [menuState, setMenuState] = useState({ anchorEl: null, toolName: null });
@@ -98,11 +98,11 @@ export default function EditorPage() {
   };
 
   const applyCrop = async () => {
-    if (!originalSrc) return;
+    if (!baseSrc) return;
     try {
       const img = new Image();
       img.crossOrigin = 'anonymous';
-      img.src = originalSrc;
+      img.src = baseSrc;
       await img.decode();
       const iw = img.naturalWidth;
       const ih = img.naturalHeight;
@@ -130,6 +130,8 @@ export default function EditorPage() {
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, sx, sy, tw, th, 0, 0, tw, th);
       const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+      // set as new base so further edits apply on this
+      setBaseSrc(dataUrl);
       setDisplaySrc(dataUrl);
       setSnackbar({ open: true, message: 'Recorte aplicado', severity: 'success' });
       setMenuState({ anchorEl: null, toolName: null });
@@ -140,11 +142,11 @@ export default function EditorPage() {
   };
 
   const applyFilters = async () => {
-    if (!originalSrc) return;
+    if (!baseSrc) return;
     try {
       const img = new Image();
       img.crossOrigin = 'anonymous';
-      img.src = originalSrc;
+      img.src = baseSrc;
       await img.decode();
       const iw = img.naturalWidth;
       const ih = img.naturalHeight;
@@ -157,6 +159,8 @@ export default function EditorPage() {
       ctx.drawImage(img, 0, 0, iw, ih);
       if (ctx.filter !== undefined) ctx.filter = 'none';
       const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+      // save as new base so filters stack with future edits
+      setBaseSrc(dataUrl);
       setDisplaySrc(dataUrl);
       setSnackbar({ open: true, message: 'Filtros aplicados', severity: 'success' });
       setMenuState({ anchorEl: null, toolName: null });
@@ -175,7 +179,7 @@ export default function EditorPage() {
         setSnackbar({ open: true, message: 'Projeto não encontrado', severity: 'error' });
         return;
       }
-      const updated = { ...all[idx], imageData: displaySrc || originalSrc, lastEdited: 'Agora' };
+      const updated = { ...all[idx], imageData: displaySrc || baseSrc, lastEdited: 'Agora' };
       all[idx] = updated;
       localStorage.setItem('ffv2_projects', JSON.stringify(all));
       // trigger download of the edited image
@@ -207,7 +211,7 @@ export default function EditorPage() {
     const reader = new FileReader();
     reader.onload = (ev) => {
       const dataUrl = ev.target.result;
-      setOriginalSrc(dataUrl);
+      setBaseSrc(dataUrl);
       setDisplaySrc(dataUrl);
       setMenuState({ anchorEl: null, toolName: null });
     };
