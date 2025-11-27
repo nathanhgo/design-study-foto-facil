@@ -26,6 +26,12 @@ export default function Home() {
         rotation: Math.random() * 20 - 10,
         sx: { bottom: { xs: '5vh', md: '10vh' }, left: { xs: '10%', md: '15%' } },
       },
+      {
+        id: 4,
+        imageUrl: `/randomImages/04.jpg`,
+        rotation: Math.random() * 20 - 5,
+        sx: { bottom: { xs: '12vh', md: '15vh' }, right: { xs: '5%', md: '10%' } },      
+      }
     ];
     setPolaroids(newPolaroids);
   }, []);
@@ -36,7 +42,7 @@ export default function Home() {
       flexDirection: 'column',
       minHeight: '100vh',
     }}>
-      <PersonalizedHeader loggedIn={true} />
+      <PersonalizedHeader loggedIn={false} />
       <Box 
         component="main" 
         sx={{
@@ -54,7 +60,7 @@ export default function Home() {
           <Polaroid key={p.id} {...p} />
         ))}
 
-        <Typography variant='h6' fontSize={40} mb={2} sx={{textAlign: 'center', width:'400px'}} >
+        <Typography variant='h6' fontSize={{xs: 30, sm:40}} mb={2} sx={{textAlign: 'center', width:'400px', fontWeight: 'bold', zIndex: 5}} >
           Seja bem-vindo(a) ao FotoFácil!
         </Typography>
         <Typography variant='h6'  fontSize={20} mb={8} sx={{textAlign: 'center', fontWeight: 'light'}} >

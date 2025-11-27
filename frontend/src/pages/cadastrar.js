@@ -1,10 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import PersonalizedHeader from '@/components/PersonalizedHeader';
-import { Box, Grid, Paper, TextField, Button, Link, Typography } from '@mui/material';
+import { Box, Grid, Paper, TextField, Button, Link, Typography, Snackbar, Alert } from '@mui/material';
 import Polaroid from '@/components/Polaroid';
+import { useRouter } from 'next/router';
 
 export default function RegisterPage() {
   const [polaroids, setPolaroids] = useState([]);
+  const [email, setEmail] = useState('');
+  const [confirmEmail, setConfirmEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const router = useRouter();
+  const timeoutRef = useRef(null);
 
   useEffect(() => {
     const newPolaroids = [
@@ -71,13 +78,12 @@ export default function RegisterPage() {
               label="Email"
               variant="outlined"
               fullWidth
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               sx={{
-                // Cor do texto do input
                 '& .MuiInputBase-input': { color: 'text.primary' },
-                // Cor do label
                 '& label.Mui-focused': { color: 'text.primary' },
                 '& .MuiInputLabel-root': { color: 'text.primary' },
-                // Cor da borda
                 '& .MuiOutlinedInput-root': {
                   '& fieldset': { borderColor: 'text.primary' },
                   '&:hover fieldset': { borderColor: 'text.primary' },
@@ -89,13 +95,12 @@ export default function RegisterPage() {
               label="Confirmação de Email"
               variant="outlined"
               fullWidth
+              value={confirmEmail}
+              onChange={(e) => setConfirmEmail(e.target.value)}
               sx={{
-                // Cor do texto do input
                 '& .MuiInputBase-input': { color: 'text.primary' },
-                // Cor do label
                 '& label.Mui-focused': { color: 'text.primary' },
                 '& .MuiInputLabel-root': { color: 'text.primary' },
-                // Cor da borda
                 '& .MuiOutlinedInput-root': {
                   '& fieldset': { borderColor: 'text.primary' },
                   '&:hover fieldset': { borderColor: 'text.primary' },
@@ -108,13 +113,12 @@ export default function RegisterPage() {
               type="password"
               variant="outlined"
               fullWidth
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               sx={{
-                // Cor do texto do input
                 '& .MuiInputBase-input': { color: 'text.primary' },
-                // Cor do label
                 '& label.Mui-focused': { color: 'text.primary' },
                 '& .MuiInputLabel-root': { color: 'text.primary' },
-                // Cor da borda
                 '& .MuiOutlinedInput-root': {
                   '& fieldset': { borderColor: 'text.primary' },
                   '&:hover fieldset': { borderColor: 'text.primary' },
@@ -122,7 +126,7 @@ export default function RegisterPage() {
                 },
               }}
             />
-            <Button variant="contained" color="primary" size="large" sx={{ mt: 2 }}>
+            <Button onClick={handleRegister} variant="contained" color="primary" size="large" sx={{ mt: 2 }}>
               Cadastrar
             </Button>
             <Link href="/login" color="text.primary" sx={{ alignSelf: 'center', mt: 1 }}>
@@ -131,6 +135,47 @@ export default function RegisterPage() {
           </Paper>
         </Grid>
       </Grid>
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={2000}
+        onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+      >
+        <Alert severity={snackbar.severity} sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
+
+  function handleRegister() {
+    if (!email || !confirmEmail || !password) {
+      setSnackbar({ open: true, message: 'Preencha todos os campos', severity: 'error' });
+      return;
+    }
+    if (email !== confirmEmail) {
+      setSnackbar({ open: true, message: 'Emails não coincidem', severity: 'error' });
+      return;
+    }
+    try {
+      const raw = localStorage.getItem('ffv2_users');
+      const users = raw ? JSON.parse(raw) : [];
+      const exists = users.find((u) => String(u.email) === String(email));
+      if (exists) {
+        setSnackbar({ open: true, message: 'Email já cadastrado', severity: 'error' });
+        return;
+      }
+      const nextUsers = [{ email, password }, ...users];
+      localStorage.setItem('ffv2_users', JSON.stringify(nextUsers));
+      localStorage.setItem('ffv2_currentUser', JSON.stringify({ email }));
+      setSnackbar({ open: true, message: 'Registrado com sucesso', severity: 'success' });
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      timeoutRef.current = setTimeout(() => {
+        router.push('/projetos');
+      }, 2000);
+    } catch (e) {
+      console.error(e);
+      setSnackbar({ open: true, message: 'Erro ao registrar', severity: 'error' });
+    }
+  }
 }

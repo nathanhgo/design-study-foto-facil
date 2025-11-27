@@ -1,14 +1,28 @@
-import { useState, useContext } from 'react';
-import { AppBar, IconButton, Toolbar, Typography, Menu, MenuItem, Container, Box } from "@mui/material";
+import { useState, useContext, useEffect } from 'react';
+import { AppBar, IconButton, Toolbar, Typography, Menu, MenuItem, Container, Box, Snackbar, Alert } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
 import { ThemeContext } from '@/contexts/ThemeContext';
 import Link from 'next/link';
+import CameraIcon from '@mui/icons-material/Camera';
+import { useRouter } from 'next/router';
 
 export default function PersonalizedHeader({loggedIn}) {
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
+  const router = useRouter();
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const [isLogged, setIsLogged] = useState(false);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('ffv2_currentUser');
+      setIsLogged(Boolean(raw));
+    } catch (e) {
+      setIsLogged(false);
+    }
+  }, []);
 
   const handleMenu = (event) => {
     setAnchorEl(event.currentTarget);
@@ -18,9 +32,24 @@ export default function PersonalizedHeader({loggedIn}) {
     setAnchorEl(null);
   };
 
+  const handleLogout = () => {
+    try {
+      localStorage.removeItem('ffv2_currentUser');
+    } catch (e) {
+      console.error('Erro ao deslogar', e);
+    }
+    setIsLogged(false);
+    setAnchorEl(null);
+    setSnackbar({ open: true, message: 'Deslogado com sucesso', severity: 'success' });
+    setTimeout(() => {
+      router.replace('/login');
+    }, 1200);
+  };
+
   const { toggleTheme, themeMode } = useContext(ThemeContext);
 
   return (
+    <>
     <AppBar 
       position="static" 
       sx={{ 
@@ -31,13 +60,23 @@ export default function PersonalizedHeader({loggedIn}) {
       <Container maxWidth="lg" sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', height: '8vh' }}>
 
         <Link href="/" style={{ textDecoration: 'none', color: 'inherit' }}>
-          <Typography variant="h6" component="h1">
+          <Typography variant="h6" component="h1" sx={{ display: 'flex', alignItems: 'center' }}>
+            <CameraIcon sx={{ mr: 1 }} fontSize='large' />
             FotoFácil
           </Typography>
         </Link>
 
-        { loggedIn ? (
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+        <Typography variant='h6' fontSize={{xs: 10, sm:20}} sx={{textAlign: 'center', fontStyle: 'italic', zIndex: 5}} >
+          Crie, edite e compartilhe suas fotos com facilidade!
+        </Typography>
+
+        { isLogged ? (
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '8rem'}}>
+
+            <IconButton sx={{ ml: 1 }} onClick={toggleTheme} color="inherit">
+              {themeMode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
+            </IconButton>
+
             <Toolbar disableGutters>
               <IconButton
                 size="large"
@@ -73,16 +112,12 @@ export default function PersonalizedHeader({loggedIn}) {
                     },
                   }}
                 >
-                  <MenuItem onClick={handleClose}>Meu perfil</MenuItem>
                   <MenuItem onClick={handleClose}>
                     <Link href="/projetos" style={{ textDecoration: 'none', color: 'inherit' }}>
                       Meus projetos
                     </Link>
                   </MenuItem>
-                  <MenuItem onClick={handleClose}>Sair</MenuItem>
-                  <IconButton sx={{ ml: 1 }} onClick={toggleTheme} color="inherit">
-                    {themeMode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
-                  </IconButton>
+                  <MenuItem onClick={handleLogout}>Sair</MenuItem>
                 </Menu>
             </Toolbar>
           </Box>
@@ -94,5 +129,16 @@ export default function PersonalizedHeader({loggedIn}) {
         }
       </Container>
     </AppBar>
+    <Snackbar
+      open={snackbar.open}
+      autoHideDuration={2000}
+      onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
+      anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+    >
+      <Alert severity={snackbar.severity} sx={{ width: '100%' }}>
+        {snackbar.message}
+      </Alert>
+    </Snackbar>
+    </>
   )
 }
